@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Portfolio Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>📈 My Stock Portfolio</h1>
+        
+        <div class="add-stock">
+            <h3>Add New Stock</h3>
+            
+            <select id="symbol" required>
+                <option value="">Select or type symbol...</option>
+                <option value="AAPL">AAPL - Apple</option>
+                <option value="MSFT">MSFT - Microsoft</option>
+                <option value="GOOGL">GOOGL - Google</option>
+                <option value="TSLA">TSLA - Tesla</option>
+                <option value="AMZN">AMZN - Amazon</option>
+                <option value="RELIANCE">RELIANCE - Reliance</option>
+                <option value="HDFCBANK">HDFCBANK - HDFC Bank</option>
+                <option value="INFY">INFY - Infosys</option>
+            </select>
+            
+            <input type="number" id="quantity" placeholder="Quantity" required>
+            <input type="number" id="buy_price" placeholder="Buy Price" step="0.01" required>
+            <button onclick="addStock()">Add Stock</button>
+        </div>
+
+        <div class="summary" id="summary">
+            <!-- Summary will load here -->
+        </div>
+
+        <div class="portfolio">
+            <h3>My Holdings</h3>
+            <table id="portfolio-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Qty</th>
+                        <th>Buy Price</th>
+                        <th>Current</th>
+                        <th>Invested</th>
+                        <th>Current Value</th>
+                        <th>P&L (%)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function addStock() {
+            const symbol = document.getElementById('symbol').value;
+            const quantity = document.getElementById('quantity').value;
+            const buy_price = document.getElementById('buy_price').value;
+
+            if (!symbol || !quantity || !buy_price) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            fetch('/add_stock', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({symbol, quantity, buy_price})
+            })
+            .then(response => response.json())
+            .then(() => {
+                loadPortfolio();
+                // Clear inputs
+                document.getElementById('quantity').value = '';
+                document.getElementById('buy_price').value = '';
+            });
+        }
+
+        function loadPortfolio() {
+            fetch('/get_portfolio')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('summary').innerHTML = `
+                        <h3>Portfolio Summary</h3>
+                        <p>Total Invested: <strong>₹${data.total_invested}</strong></p>
+                        <p>Current Value: <strong>₹${data.total_current}</strong></p>
+                        <p>Total P&L: <strong style="color:${data.total_profit >= 0 ? 'green' : 'red'}">
+                            ₹${data.total_profit} (${data.total_invested > 0 ? ((data.total_profit/data.total_invested)*100).toFixed(2) : 0}%)
+                        </strong></p>
+                    `;
+
+                    let tbody = document.querySelector('#portfolio-table tbody');
+                    tbody.innerHTML = '';
+                    
+                    data.portfolio.forEach(stock => {
+                        let row = `<tr>
+                            <td><strong>${stock.symbol}</strong></td>
+                            <td>${stock.quantity}</td>
+                            <td>₹${stock.buy_price}</td>
+                            <td>₹${stock.current_price}</td>
+                            <td>₹${stock.invested}</td>
+                            <td>₹${stock.current_value}</td>
+                            <td style="color:${stock.profit >= 0 ? 'green' : 'red'}">
+                                ₹${stock.profit} (${stock.profit_percent}%)
+                            </td>
+                        </tr>`;
+                        tbody.innerHTML += row;
+                    });
+                });
+        }
+
+        window.onload = loadPortfolio;
+    </script>
+</body>
+</html>
